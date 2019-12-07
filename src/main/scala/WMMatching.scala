@@ -178,7 +178,30 @@ object WMMatching {
       dualvar(edges(k)._1) + dualvar(edges(k)._2) - 2 * edges(k)._3
     }
 
-    class BlossomLeavesTraversable(b: Int) extends Traversable[Int] {
+    trait TraversableIsh[A] {
+
+      import scala.util.control.Breaks.{ breakable, break }
+
+      def foreach[U](f: A => U): Unit
+
+      def find(p: A => Boolean): Option[A] = {
+        var result: Option[A] = None
+        breakable {
+          for (x <- this)
+            if (p(x)) { result = Some(x); break }
+        }
+        result
+      }
+
+      def flatMap[B](f: A => Iterable[B]): List[B] = {
+        def builder = new scala.collection.mutable.ListBuffer[B]
+        val b = builder
+        for (x <- this) b ++= f(x).seq
+        b.result
+      }
+    }
+
+    class BlossomLeavesTraversable(b: Int) extends TraversableIsh[Int] {
       def foreach[U](f: Int => U): Unit = {
         def g(v: Int): Unit = {
           blossomchilds(v).foreach { w =>
@@ -191,7 +214,7 @@ object WMMatching {
     }
 
     // Generate the leaf vertices of a blossom.
-    def blossomLeaves(b: Int): Traversable[Int] = new BlossomLeavesTraversable(b)
+    def blossomLeaves(b: Int): TraversableIsh[Int] = new BlossomLeavesTraversable(b)
 
     // Assign label t to the top-level blossom containing vertex w
     // and record the fact that w was reached through the edge with
