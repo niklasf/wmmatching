@@ -178,20 +178,10 @@ object WMMatching {
       dualvar(edges(k)._1) + dualvar(edges(k)._2) - 2 * edges(k)._3
     }
 
-    class BlossomLeavesTraversable(b: Int) extends Traversable[Int] {
-      def foreach[U](f: Int => U): Unit = {
-        def g(v: Int): Unit = {
-          blossomchilds(v).foreach { w =>
-            if (w < nvertex) f(w): Unit
-            else g(w)
-          }
-        }
-        if (b < nvertex) f(b) else g(b)
-      }
-    }
-
     // Generate the leaf vertices of a blossom.
-    def blossomLeaves(b: Int): Traversable[Int] = new BlossomLeavesTraversable(b)
+    def blossomLeaves(b: Int): List[Int] = {
+      if (b < nvertex) List(b) else blossomchilds(b).toList.flatMap(blossomLeaves)
+    }
 
     // Assign label t to the top-level blossom containing vertex w
     // and record the fact that w was reached through the edge with
@@ -304,7 +294,7 @@ object WMMatching {
 
       val bestedgeto = Array.fill(allocatedvertex)(-1)
       for (bv <- blossomchilds(b)) {
-        val nblists: Traversable[Int] =
+        val nblists: Iterable[Int] =
           if (blossombestedges(bv) == null) blossomLeaves(bv).flatMap(v => neighbend(v).view.map { p => p >> 1 })
           else blossombestedges(bv)
         for (k <- nblists) {
