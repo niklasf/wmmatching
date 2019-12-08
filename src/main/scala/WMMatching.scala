@@ -178,20 +178,46 @@ object WMMatching {
       dualvar(edges(k)._1) + dualvar(edges(k)._2) - 2 * edges(k)._3
     }
 
-    class BlossomLeavesTraversable(b: Int) extends Traversable[Int] {
-      def foreach[U](f: Int => U): Unit = {
-        def g(v: Int): Unit = {
-          blossomchilds(v).foreach { w =>
-            if (w < nvertex) f(w): Unit
-            else g(w)
+    class BlossomLeavesIterator(b: Int) extends Iterator[Int] {
+      private var stack: List[Iterator[Int]] = List(b).iterator :: Nil
+      private var current: Option[Int] = None
+
+      def advance: Unit = {
+        if (current.isEmpty) {
+          while (stack.nonEmpty) {
+            while (stack.head.hasNext) {
+              val v = stack.head.next
+              if (v < nvertex) {
+                current = Some(v)
+                return
+              } else {
+                stack = blossomchilds(v).iterator :: stack
+              }
+            }
+            stack = stack.tail
           }
         }
-        if (b < nvertex) f(b) else g(b)
+      }
+
+      override def hasNext = {
+        advance
+        current.isDefined
+      }
+
+      override def next: Int = {
+        advance
+        val result = current.get
+        current = None
+        result
       }
     }
 
+    class BlossomLeavesIterable(b: Int) extends Iterable[Int] {
+      override def iterator = new BlossomLeavesIterator(b)
+    }
+
     // Generate the leaf vertices of a blossom.
-    def blossomLeaves(b: Int): Traversable[Int] = new BlossomLeavesTraversable(b)
+    def blossomLeaves(b: Int): Iterable[Int] = new BlossomLeavesIterable(b)
 
     // Assign label t to the top-level blossom containing vertex w
     // and record the fact that w was reached through the edge with
@@ -304,7 +330,7 @@ object WMMatching {
 
       val bestedgeto = Array.fill(allocatedvertex)(-1)
       for (bv <- blossomchilds(b)) {
-        val nblists: Traversable[Int] =
+        val nblists: Iterable[Int] =
           if (blossombestedges(bv) == null) blossomLeaves(bv).flatMap(v => neighbend(v).view.map { p => p >> 1 })
           else blossombestedges(bv)
         for (k <- nblists) {
